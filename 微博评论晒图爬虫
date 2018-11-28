@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 27 16:25:29 2018
+
+@author: Administrator
+"""
+from selenium import webdriver
+from bs4 import BeautifulSoup
+import time
+import re
+import os
+import urllib.request
+
+#模拟登录
+username = '你的账号'
+password = '你的密码'
+url1 = 'http://login.sina.com.cn/'
+chromedriver_dir = r'C:\Users\Administrator\AppData\Local\CentBrowser\Application\chromedriver.exe' # 注意，这里是你的安装路径
+browser = webdriver.Chrome(chromedriver_dir)
+browser.get(url1)
+elem_user = browser.find_element_by_name("username")
+elem_user.send_keys(username) #用户名
+elem_pwd = browser.find_element_by_name("password")
+elem_pwd.send_keys(password)  #密码
+
+time.sleep(20)
+        
+elem_sub = browser.find_element_by_xpath("//input[@class='W_btn_a btn_34px']")
+elem_sub.click()              #点击登陆 因无name属性
+time.sleep(2)
+
+#打开需要爬的页面
+url2 = 'https://weibo.com/1740806873/Guauhitiu?refer_flag=1001030103_&type=comment#_rnd1543317436501'
+browser.get(url2)
+#滚动到底部并加载更多页面
+n=1;
+try:
+    while n <= 100:
+        js='var q=document.documentElement.scrollTop=100000'  
+        browser.execute_script(js)  
+        time.sleep(5)
+        while n >= 3:
+            browser.find_element_by_xpath("//span[@class='more_txt']").click() #点击查看更多
+            time.sleep(5)
+        n=n+1
+except:
+    print('加载完成')
+
+os.mkdir('wbpic') #创建文件夹
+os.chdir('wbpic') #在文件夹内操作
+#获取图片链接
+data = browser.page_source
+soup1 = BeautifulSoup(data, 'lxml')
+imglist = soup1.find_all('img', {"src":re.compile("\/\/.*thumb180.*\.jpg")})  #发现html中带img标签的数据，输出格式为<img xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx，存入集合
+lenth = len(imglist)  #计算集合的个数
+for i in range(lenth):
+    picaddress = imglist[i].attrs['src'] #抓取img中属性为src的信息,例如<img src="123456" xxxxxxxxxxxxxxxx,则输出为123456
+    picaddress = picaddress.replace('//','https://')
+    picaddress = picaddress.replace('thumb180','bmiddle')
+    #print(picaddress)
+    filename = picaddress.split('/')[-1] #切片，从/开始到结尾
+    with open(filename,'wb') as f:
+        img = urllib.request.urlopen(picaddress).read() #下载进程
+        f.write(img)
+
+browser.close() 
